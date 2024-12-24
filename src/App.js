@@ -1,18 +1,17 @@
 import React, { useState, useRef } from "react";
 import Webcam from "react-webcam";
-import {
-  Button,
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Input,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  CircularProgress,
-} from "@mui/material";
+import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Input from "@mui/material/Input";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import CircularProgress from "@mui/material/CircularProgress";
+import Alert from '@mui/material/Alert';
 
 // MUI styles (using the sx prop for styling)
 const styles = {
@@ -91,10 +90,14 @@ function App() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setImage(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // Store base64 encoded string of the image
+        setImage(reader.result); 
+      };
+      reader.readAsDataURL(file);
     }
   };
-
   // Capture image from webcam
   const capture = () => {
     const imageSrc = webcamRef.current.getScreenshot();
@@ -132,11 +135,10 @@ function App() {
             imageWithFace: data.image_with_face, // Set the base64 image here
           });
         } else {
-          alert("Error in prediction");
+          <Alert severity="error">Error in Doing Model prediction.</Alert>
         }
       } catch (error) {
-        console.error("Error during prediction:", error);
-        alert("An error occurred while predicting");
+        <Alert severity="error">An error occurred while predicting</Alert>
       } finally {
         setLoading(false);
       }
