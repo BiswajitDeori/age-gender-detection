@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
@@ -11,7 +11,7 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import CircularProgress from "@mui/material/CircularProgress";
-import Alert from '@mui/material/Alert';
+import Alert from "@mui/material/Alert";
 
 // MUI styles (using the sx prop for styling)
 const styles = {
@@ -85,6 +85,7 @@ function App() {
   const [loading, setLoading] = useState(false); // Loading state
   const [openModal, setOpenModal] = useState(false);
   const webcamRef = useRef(null);
+  const [showAlert, setShowAlert] = useState(""); // Alert message state
 
   // Handle image upload
   const handleImageChange = (e) => {
@@ -92,8 +93,37 @@ function App() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Store base64 encoded string of the image
-        setImage(reader.result); 
+        const img = new Image();
+        img.onload = () => {
+          // Create a canvas element to resize the image
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          // Set canvas dimensions to 256x256 (as expected by the model)
+          canvas.width = 256;
+          canvas.height = 256;
+
+          // Draw the image onto the canvas with the new size
+          ctx.drawImage(img, 0, 0, 256, 256);
+
+          // Ensure the image is in RGB format (remove alpha channel if exists)
+          const imageData = ctx.getImageData(0, 0, 256, 256);
+          const data = imageData.data;
+
+          // Loop through each pixel and remove the alpha channel by ensuring it's an RGB image
+          for (let i = 0; i < data.length; i += 4) {
+            // Convert RGBA to RGB (keep the red, green, blue values and discard alpha)
+            data[i + 3] = 255; // Set alpha to 255 (fully opaque)
+          }
+
+          // Put the modified image data back onto the canvas
+          ctx.putImageData(imageData, 0, 0);
+
+          // Convert the canvas to a base64 image (now in RGB format)
+          const resizedImage = canvas.toDataURL("image/jpeg"); // Ensure it is in RGB format (JPEG)
+          setImage(resizedImage);
+        };
+        img.src = reader.result;
       };
       reader.readAsDataURL(file);
     }
@@ -101,12 +131,44 @@ function App() {
   // Capture image from webcam
   const capture = () => {
     const imageSrc = webcamRef.current.getScreenshot();
-    setImage(imageSrc);
+    const img = new Image();
+    img.onload = () => {
+      // Create a canvas element to resize the image
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Set canvas dimensions to 256x256 (as expected by the model)
+      canvas.width = 256;
+      canvas.height = 256;
+
+      // Draw the image onto the canvas with the new size
+      ctx.drawImage(img, 0, 0, 256, 256);
+
+      // Ensure the image is in RGB format (remove alpha channel if exists)
+      const imageData = ctx.getImageData(0, 0, 256, 256);
+      const data = imageData.data;
+
+      // Loop through each pixel and remove the alpha channel by ensuring it's an RGB image
+      for (let i = 0; i < data.length; i += 4) {
+        // Convert RGBA to RGB (keep the red, green, blue values and discard alpha)
+        data[i + 3] = 255; // Set alpha to 255 (fully opaque)
+      }
+
+      // Put the modified image data back onto the canvas
+      ctx.putImageData(imageData, 0, 0);
+
+      // Convert the canvas to a base64 image (now in RGB format)
+      const resizedImage = canvas.toDataURL("image/jpeg"); // Ensure it is in RGB format (JPEG)
+      setImage(resizedImage);
+    };
+    img.src = imageSrc;
   };
 
   // Send the image to the Flask backend
   const handleSubmit = async () => {
     setLoading(true);
+
+    setShowAlert(""); // Reset any previous alert
 
     if (image) {
       const payload = {
@@ -114,13 +176,16 @@ function App() {
       };
 
       try {
-        const response = await fetch("https://ashamed-bat-studentfindmyway-a7018881.koyeb.app/get_info", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+        const response = await fetch(
+          "https://ashamed-bat-studentfindmyway-a7018881.koyeb.app/get_info",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Network response was not ok");
@@ -128,17 +193,17 @@ function App() {
 
         const data = await response.json();
 
-        if ( data.gender && data.image_with_face) {
+        if (data.gender && data.image_with_face) {
           setResult({
             age: data.age,
             gender: data.gender,
             imageWithFace: data.image_with_face, // Set the base64 image here
           });
         } else {
-          <Alert severity="error">Error in Doing Model prediction.</Alert>
+          setShowAlert("Error in doing model prediction.");
         }
       } catch (error) {
-        <Alert severity="error">An error occurred while predicting</Alert>
+        setShowAlert("An error occurred while predicting.");
       } finally {
         setLoading(false);
       }
@@ -167,6 +232,12 @@ function App() {
           Upload a photo or use the webcam to detect age and gender.
         </Typography>
 
+        {/* Display the alert if there is a message */}
+        {showAlert && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {showAlert}
+          </Alert>
+        )}
         {/* Instruction Button */}
         <Button
           variant="outlined"
