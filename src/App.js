@@ -84,6 +84,7 @@ function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false); // Loading state
   const [openModal, setOpenModal] = useState(false);
+  const [openPdfModal, setOpenPdfModal] = useState(false);
   const webcamRef = useRef(null);
   const [showAlert, setShowAlert] = useState(""); // Alert message state
 
@@ -222,6 +223,15 @@ function App() {
     setOpenModal(false);
   };
 
+  const handleOpenPdfModal = () => {
+    setOpenPdfModal(true);
+  };
+
+  // Function to close the PDF modal
+  const handleClosePdfModal = () => {
+    setOpenPdfModal(false);
+  };
+
   return (
     <Box sx={styles.appContainer}>
       <Box sx={styles.header}>
@@ -239,15 +249,27 @@ function App() {
           </Alert>
         )}
         {/* Instruction Button */}
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={handleOpenModal}
-          sx={{ mt: 3, mb: 2 }}
-          style={styles.button}
-        >
-          Instructions
-        </Button>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={handleOpenModal}
+            sx={{ mt: 3 }}
+            style={styles.button}
+          >
+            Instructions
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleOpenPdfModal}
+            sx={{ mb: 3 }}
+            style={styles.button}
+          >
+            Model Code
+          </Button>
+        </Box>
 
         {/* Flex container for file upload and webcam capture */}
         <Box sx={styles.flexContainer}>
@@ -388,6 +410,29 @@ function App() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseModal} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal to display the PDF */}
+      <Dialog
+        open={openPdfModal}
+        onClose={handleClosePdfModal}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>Model Code</DialogTitle>
+        <DialogContent>
+          <iframe
+            src="/ModelFile/modelCode.pdf" // Path to your PDF file
+            width="100%"
+            height="600px"
+            title="PDF Viewer"
+          ></iframe>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePdfModal} color="primary">
             Close
           </Button>
         </DialogActions>
